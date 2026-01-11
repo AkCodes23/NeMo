@@ -112,7 +112,23 @@ def initialize_sagemaker() -> None:
     )
 
     def _install_system_libraries() -> None:
-        os.system('chmod 777 /tmp && apt-get update && apt-get install -y libsndfile1 ffmpeg')
+        import subprocess
+
+        try:
+            subprocess.run(
+                ["apt-get", "update"],
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            subprocess.run(
+                ["apt-get", "install", "-y", "libsndfile1", "ffmpeg"],
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        except Exception as e:
+            logging.error(f"Failed to install system libraries: {e}")
 
     def _patch_torch_metrics() -> None:
         """
