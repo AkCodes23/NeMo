@@ -104,6 +104,7 @@ def initialize_sagemaker() -> None:
     This function installs libraries that NeMo requires for the ASR toolkit + initializes sagemaker ddp.
     """
 
+    logging.info("Registering SageMaker DDP strategy 'smddp'.")
     StrategyRegistry.register(
         name='smddp',
         strategy=SageMakerDDPStrategy,
@@ -112,7 +113,27 @@ def initialize_sagemaker() -> None:
     )
 
     def _install_system_libraries() -> None:
-        os.system('chmod 777 /tmp && apt-get update && apt-get install -y libsndfile1 ffmpeg')
+        import subprocess
+
+        logging.info("Installing system libraries: libsndfile1, ffmpeg")
+        try:
+            logging.info("Running apt-get update")
+            subprocess.run(
+                ["apt-get", "update"],
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            logging.info("Running apt-get install for libsndfile1 and ffmpeg")
+            subprocess.run(
+                ["apt-get", "install", "-y", "libsndfile1", "ffmpeg"],
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            logging.info("System libraries installed successfully.")
+        except Exception as e:
+            logging.error(f"Failed to install system libraries: {e}")
 
     def _patch_torch_metrics() -> None:
         """
@@ -127,6 +148,7 @@ def initialize_sagemaker() -> None:
 
         Metric.__hash__ = __new_hash__
 
+    logging.info("Patching torchmetrics hash function for SageMaker compatibility.")
     _patch_torch_metrics()
 
     if os.environ.get("RANK") and os.environ.get("WORLD_SIZE"):
@@ -135,10 +157,12 @@ def initialize_sagemaker() -> None:
         # has to be imported, as it overrides torch modules and such when DDP is enabled.
         import smdistributed.dataparallel.torch.torch_smddp
 
+        logging.info("Initializing SageMaker distributed process group.")
         dist.init_process_group()
 
         if dist.get_local_rank():
             _install_system_libraries()
+        logging.info("Waiting at barrier for all processes.")
         return dist.barrier()  # wait for main process
     _install_system_libraries()
     return
