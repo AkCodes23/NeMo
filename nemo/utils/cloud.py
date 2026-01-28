@@ -131,6 +131,13 @@ def initialize_sagemaker() -> None:
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
+        except subprocess.CalledProcessError as e:
+            logging.error(
+                "Failed to install system libraries via apt-get (command=%s, returncode=%s): %s",
+                getattr(e, "cmd", None),
+                getattr(e, "returncode", None),
+                e,
+            )
             logging.info("System libraries installed successfully.")
         except Exception as e:
             logging.error(f"Failed to install system libraries: {e}")
