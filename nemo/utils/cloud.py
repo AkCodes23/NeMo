@@ -85,8 +85,11 @@ def maybe_download_from_cloud(url, filename, subfolder=None, cache_dir=None, ref
 
 
 class SageMakerDDPStrategy(DDPStrategy):
+    """DDP strategy configured for AWS SageMaker distributed training."""
+
     @property
     def cluster_environment(self):
+        """Return a LightningEnvironment configured from SageMaker environment variables."""
         env = LightningEnvironment()
         env.world_size = lambda: int(os.environ["WORLD_SIZE"])
         env.global_rank = lambda: int(os.environ["RANK"])
@@ -94,7 +97,7 @@ class SageMakerDDPStrategy(DDPStrategy):
 
     @cluster_environment.setter
     def cluster_environment(self, env):
-        # prevents Lightning from overriding the Environment required for SageMaker
+        """No-op setter to prevent Lightning from overriding the SageMaker environment."""
         pass
 
 
@@ -162,7 +165,7 @@ def initialize_sagemaker() -> None:
         import smdistributed.dataparallel.torch.distributed as dist
 
         # has to be imported, as it overrides torch modules and such when DDP is enabled.
-        import smdistributed.dataparallel.torch.torch_smddp
+        import smdistributed.dataparallel.torch.torch_smddp  # noqa: F401
 
         logging.info("Initializing SageMaker distributed process group.")
         dist.init_process_group()
